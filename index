@@ -1,0 +1,840 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="referrer" content="strict-origin-when-cross-origin">
+  <title>Plataforma de Vídeos Interativos</title>
+
+  <!-- Polyfill para Drag and Drop em telas Touch/Mobile -->
+  <script src="https://cdn.jsdelivr.net/npm/drag-drop-touch@1.3.0/DragDropTouch.js"></script>
+
+  <style>
+    * {
+      box-sizing: border-box;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+      background-color: #f0f2f5;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+    }
+
+    /* Navegação do Instrutor */
+    nav {
+      width: 100%;
+      background-color: #1a73e8;
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      padding: 10px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+    }
+
+    nav button {
+      background: transparent;
+      border: 2px solid white;
+      color: white;
+      padding: 8px 16px;
+      border-radius: 20px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      font-size: 14px;
+    }
+
+    nav button.active, nav button:hover {
+      background: white;
+      color: #1a73e8;
+    }
+
+    .view-screen {
+      width: 100%;
+      max-width: 850px;
+      padding: 15px;
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    .card {
+      background: #ffffff;
+      padding: 20px;
+      border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+      margin-bottom: 20px;
+    }
+
+    h1, h2, h3 {
+      color: #1a73e8;
+      margin-top: 0;
+    }
+
+    .form-group {
+      margin-bottom: 14px;
+    }
+
+    label {
+      display: block;
+      font-weight: 600;
+      margin-bottom: 6px;
+      color: #333;
+      font-size: 14px;
+    }
+
+    input[type="text"], input[type="number"], select {
+      width: 100%;
+      padding: 12px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      font-size: 14px;
+    }
+
+    .btn {
+      background: #1a73e8;
+      color: white;
+      border: none;
+      padding: 12px 16px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 600;
+      width: 100%;
+      margin-top: 10px;
+      font-size: 15px;
+      touch-action: manipulation;
+    }
+
+    .btn:hover { background: #1557b0; }
+    .btn-secondary { background: #5f6368; }
+    .btn-danger { background: #d93025; }
+    .btn-start { background: #34a853; font-size: 18px; padding: 15px 30px; width: auto; }
+    .btn-start:hover { background: #2d9247; }
+
+    .share-link-box {
+      background: #e8f0fe;
+      border: 1px solid #aecbfa;
+      padding: 12px;
+      border-radius: 8px;
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .option-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 8px;
+      background: #f8f9fa;
+      padding: 8px;
+      border-radius: 6px;
+      border: 1px solid #e0e0e0;
+    }
+
+    .interaction-card {
+      border-left: 4px solid #1a73e8;
+      background: #f8f9fa;
+      padding: 12px;
+      margin-bottom: 10px;
+      border-radius: 4px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      font-size: 14px;
+    }
+
+    /* Player de Vídeo e Overlays */
+    .video-wrapper {
+      position: relative;
+      padding-bottom: 56.25%;
+      height: 0;
+      background: #000;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+    }
+
+    .video-wrapper iframe {
+      position: absolute;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      border: 0;
+    }
+
+    .overlay {
+      position: absolute;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background: rgba(0, 0, 0, 0.92);
+      color: white;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      padding: 15px;
+      z-index: 10;
+      overflow-y: auto;
+    }
+
+    .quiz-box {
+      background: #202124;
+      padding: 20px;
+      border-radius: 12px;
+      width: 100%;
+      max-width: 500px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+      max-height: 100%;
+      overflow-y: auto;
+      text-align: center;
+    }
+
+    .quiz-options {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin: 15px 0;
+    }
+
+    .quiz-btn {
+      background: #3c4043;
+      color: white;
+      border: 2px solid #5f6368;
+      padding: 12px;
+      border-radius: 8px;
+      cursor: pointer;
+      text-align: left;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      user-select: none;
+      touch-action: none;
+    }
+
+    .drag-item { cursor: grab; }
+    .drag-item.dragging { opacity: 0.5; background: #1a73e8; }
+    .drag-handle { color: #9aa0a6; font-size: 20px; }
+
+    .feedback {
+      padding: 12px;
+      border-radius: 6px;
+      font-weight: bold;
+      margin-bottom: 12px;
+      text-align: center;
+      font-size: 14px;
+    }
+    .feedback.correct { background: #137333; color: #e6f4ea; }
+    .feedback.incorrect { background: #c5221f; color: #fce8e6; }
+
+    /* Relatório Final */
+    .score-badge {
+      font-size: 3rem;
+      font-weight: bold;
+      color: #34a853;
+      margin: 10px 0;
+    }
+
+    .score-details {
+      background: #303134;
+      padding: 15px;
+      border-radius: 8px;
+      margin-bottom: 15px;
+      font-size: 15px;
+      line-height: 1.6;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Menu do Instrutor (SÓ APARECE NO MODO CONFIGURAÇÃO) -->
+  <nav id="instructorNav" class="hidden">
+    <button id="navConfig" onclick="switchScreen('config')">⚙️ Configuração</button>
+    <button id="navStudent" onclick="switchScreen('student')">🎓 Preview do Aluno</button>
+  </nav>
+
+  <!-- ================= TELA 1: CONFIGURAÇÃO ================= -->
+  <div id="screenConfig" class="view-screen hidden">
+    
+    <!-- Link para Compartilhar -->
+    <div class="card">
+      <h2>🔗 Link Direto para o Aluno</h2>
+      <p style="font-size: 14px; color: #555;">Envie o link abaixo para seus alunos. Ele abre diretamente o vídeo sem exibir os menus de configuração:</p>
+      <div class="share-link-box">
+        <input type="text" id="studentShareUrl" readonly>
+        <button class="btn" style="width: auto; margin:0; padding: 10px 15px;" onclick="copyStudentLink()">Copiar Link</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>1. Configurar Vídeo Principal</h2>
+      <div class="form-group">
+        <label for="youtubeUrl">Link do Vídeo do YouTube:</label>
+        <input type="text" id="youtubeUrl" value="https://www.youtube.com/watch?v=M7lc1UVf-VE" onchange="saveDataToStorage()">
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>2. Adicionar Dinâmica / Pergunta</h2>
+      
+      <div class="form-group">
+        <label for="pauseTime">Pausar no Segundo:</label>
+        <input type="number" id="pauseTime" placeholder="Ex: 10" min="1">
+      </div>
+
+      <div class="form-group">
+        <label for="quizType">Tipo de Dinâmica:</label>
+        <select id="quizType" onchange="renderOptionsForm()">
+          <option value="choice">Múltipla Escolha (1 Opção Correta)</option>
+          <option value="order">Ordenar Sequência (Arrastar e Soltar)</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label for="questionText">Pergunta / Instrução:</label>
+        <input type="text" id="questionText" placeholder="Ex: Arraste os passos para a ordem correta:">
+      </div>
+
+      <div class="form-group">
+        <label id="optionsLabel">Alternativas:</label>
+        <div id="optionsContainer"></div>
+        <button type="button" class="btn btn-secondary" onclick="addOptionInput()">+ Adicionar Opção</button>
+      </div>
+
+      <div class="form-group" style="margin-top: 20px; border-top: 1px solid #eee; padding-top: 15px;">
+        <label for="correctFeedback" style="color: #137333;">Mensagem para Resposta Correta:</label>
+        <input type="text" id="correctFeedback" placeholder="Ex: ✨ Parabéns! Você acertou.">
+      </div>
+
+      <div class="form-group">
+        <label for="incorrectFeedback" style="color: #c5221f;">Mensagem para Resposta Incorreta:</label>
+        <input type="text" id="incorrectFeedback" placeholder="Ex: ❌ Resposta Incorreta!">
+      </div>
+
+      <button type="button" class="btn" onclick="saveInteraction()">💾 Salvar Dinâmica neste Segundo</button>
+    </div>
+
+    <div class="card">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+        <h2 style="margin: 0;">3. Dinâmicas Cadastradas</h2>
+        <button class="btn btn-danger" style="width: auto; margin: 0;" onclick="clearAllData()">🗑️ Limpar Tudo</button>
+      </div>
+      <div id="interactionsList">Nenhuma dinâmica cadastrada ainda.</div>
+    </div>
+  </div>
+
+  <!-- ================= TELA 2: ALUNO ================= -->
+  <div id="screenStudent" class="view-screen">
+    <div class="card">
+      <h2>Vídeo Interativo</h2>
+      <div class="video-wrapper">
+        <div id="playerContainer"></div>
+
+        <!-- Tela de Start Manual -->
+        <div id="startOverlay" class="overlay">
+          <button class="btn btn-start" onclick="startStudentVideo()">▶ Iniciar Vídeo</button>
+        </div>
+
+        <!-- Overlay de Quiz/Dinâmicas -->
+        <div id="quizOverlay" class="overlay hidden">
+          <div class="quiz-box">
+            <h3 id="displayQuestion" style="color:white; text-align: left;">Pergunta?</h3>
+            <div id="displayOptions" class="quiz-options"></div>
+            <div id="displayFeedback" class="feedback hidden"></div>
+            <button id="btnAction" class="btn" onclick="handleQuizSubmit()">Responder</button>
+            <button id="btnContinue" class="btn hidden" onclick="resumeVideo()">Continuar Vídeo ▶</button>
+          </div>
+        </div>
+
+        <!-- Overlay do Relatório Final -->
+        <div id="reportOverlay" class="overlay hidden">
+          <div class="quiz-box">
+            <h2>🎓 Aula Concluída!</h2>
+            <p>Confira seu resultado final:</p>
+            
+            <div id="scorePercentage" class="score-badge">0%</div>
+
+            <div class="score-details">
+              <div>🎯 <strong>Total de Atividades:</strong> <span id="totalQuestions">0</span></div>
+              <div>✅ <strong>Acertos:</strong> <span id="correctAnswers">0</span></div>
+              <div>❌ <strong>Erros:</strong> <span id="incorrectAnswers">0</span></div>
+            </div>
+
+            <p id="finalMessage" style="font-size: 14px; margin-bottom: 15px;"></p>
+
+            <button class="btn" onclick="restartVideo()">🔄 Refazer Vídeo</button>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let interactions = []; 
+    let currentInteraction = null;
+    let player = null;
+    let checkTimer = null;
+
+    // Métricas de Desempenho do Aluno
+    let score = {
+      correct: 0,
+      incorrect: 0,
+      total: 0
+    };
+
+    window.onload = function() {
+      loadDataFromStorage();
+      renderOptionsForm();
+      
+      // Controle de Rota / Exibição baseada na URL
+      const urlParams = new URLSearchParams(window.location.search);
+      const viewMode = urlParams.get('view');
+
+      if (viewMode === 'config') {
+        // Modo Instrutor
+        document.getElementById('instructorNav').classList.remove('hidden');
+        switchScreen('config');
+      } else {
+        // Modo Aluno (Padrão ou ?view=student)
+        document.getElementById('instructorNav').classList.add('hidden');
+        switchScreen('student');
+      }
+
+      updateShareLink();
+    };
+
+    function updateShareLink() {
+      const baseUrl = window.location.href.split('?')[0];
+      document.getElementById('studentShareUrl').value = `${baseUrl}?view=student`;
+    }
+
+    function copyStudentLink() {
+      const copyText = document.getElementById('studentShareUrl');
+      copyText.select();
+      document.execCommand("copy");
+      alert("Link do aluno copiado com sucesso!");
+    }
+
+    function saveDataToStorage() {
+      const dataToSave = {
+        youtubeUrl: document.getElementById('youtubeUrl').value.trim(),
+        interactions: interactions
+      };
+      localStorage.setItem('interactive_video_data', JSON.stringify(dataToSave));
+      updateShareLink();
+    }
+
+    function loadDataFromStorage() {
+      const saved = localStorage.getItem('interactive_video_data');
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved);
+          if (parsed.youtubeUrl) {
+            document.getElementById('youtubeUrl').value = parsed.youtubeUrl;
+          }
+          if (Array.isArray(parsed.interactions)) {
+            interactions = parsed.interactions;
+          }
+        } catch (e) {
+          console.error("Erro ao carregar dados", e);
+        }
+      }
+      updateInteractionsList();
+    }
+
+    function clearAllData() {
+      if (confirm("Tem certeza de que deseja apagar todas as dinâmicas cadastradas?")) {
+        interactions = [];
+        localStorage.removeItem('interactive_video_data');
+        updateInteractionsList();
+        alert("Todos os dados foram limpos!");
+      }
+    }
+
+    function switchScreen(screen) {
+      document.getElementById('screenConfig').classList.add('hidden');
+      document.getElementById('screenStudent').classList.add('hidden');
+      document.getElementById('navConfig').classList.remove('active');
+      document.getElementById('navStudent').classList.remove('active');
+
+      if (screen === 'config') {
+        document.getElementById('screenConfig').classList.remove('hidden');
+        document.getElementById('navConfig').classList.add('active');
+        if (player) clearInterval(checkTimer);
+      } else {
+        document.getElementById('screenStudent').classList.remove('hidden');
+        document.getElementById('navStudent').classList.add('active');
+        initStudentPlayer();
+      }
+    }
+
+    function renderOptionsForm() {
+      const type = document.getElementById('quizType').value;
+      const container = document.getElementById('optionsContainer');
+      const label = document.getElementById('optionsLabel');
+      container.innerHTML = '';
+
+      if (type === 'choice') {
+        label.innerText = 'Alternativas (Marque a correta no botão redondo):';
+        container.appendChild(createChoiceInput(0, true));
+        container.appendChild(createChoiceInput(1, false));
+      } else {
+        label.innerText = 'Insira os itens NA ORDEM CORRETA (eles serão embaralhados para o aluno):';
+        container.appendChild(createOrderInput(0));
+        container.appendChild(createOrderInput(1));
+      }
+    }
+
+    function createChoiceInput(idx, isChecked) {
+      const div = document.createElement('div');
+      div.className = 'option-item';
+      div.innerHTML = `
+        <input type="radio" name="correctIndex" value="${idx}" ${isChecked ? 'checked' : ''}>
+        <input type="text" class="opt-text" placeholder="Opção ${idx + 1}">
+      `;
+      return div;
+    }
+
+    function createOrderInput(idx) {
+      const div = document.createElement('div');
+      div.className = 'option-item';
+      div.innerHTML = `
+        <span style="font-weight:bold">${idx + 1}º</span>
+        <input type="text" class="opt-text" placeholder="Passo/Item ${idx + 1}">
+      `;
+      return div;
+    }
+
+    function addOptionInput() {
+      const type = document.getElementById('quizType').value;
+      const container = document.getElementById('optionsContainer');
+      const idx = container.children.length;
+
+      if (type === 'choice') {
+        container.appendChild(createChoiceInput(idx, false));
+      } else {
+        container.appendChild(createOrderInput(idx));
+      }
+    }
+
+    function saveInteraction() {
+      const time = parseInt(document.getElementById('pauseTime').value);
+      const type = document.getElementById('quizType').value;
+      const question = document.getElementById('questionText').value.trim();
+      const inputs = document.querySelectorAll('#optionsContainer .opt-text');
+
+      const correctFeedback = document.getElementById('correctFeedback').value.trim() || "✨ Resposta Correta! Excelente!";
+      const incorrectFeedback = document.getElementById('incorrectFeedback').value.trim() || "❌ Resposta Incorreta!";
+
+      if (!time || time < 1) return alert('Informe um segundo válido!');
+      if (!question) return alert('Informe o texto da pergunta!');
+
+      let options = [];
+      let correctAnswers = [];
+
+      if (type === 'choice') {
+        const selectedRadio = document.querySelector('input[name="correctIndex"]:checked');
+        if (!selectedRadio) return alert('Selecione a alternativa correta!');
+        const correctIdx = parseInt(selectedRadio.value);
+
+        inputs.forEach((inp, i) => {
+          if (inp.value.trim() !== "") {
+            options.push({ id: i, text: inp.value.trim() });
+            if (i === correctIdx) correctAnswers.push(i);
+          }
+        });
+      } else {
+        inputs.forEach((inp, i) => {
+          if (inp.value.trim() !== "") {
+            options.push({ id: i, text: inp.value.trim() });
+            correctAnswers.push(i);
+          }
+        });
+      }
+
+      if (options.length < 2) return alert('Insira pelo menos 2 opções!');
+
+      interactions.push({
+        id: Date.now(),
+        time: time,
+        type: type,
+        question: question,
+        options: options,
+        correctAnswers: correctAnswers,
+        correctFeedback: correctFeedback,
+        incorrectFeedback: incorrectFeedback,
+        triggered: false
+      });
+
+      interactions.sort((a, b) => a.time - b.time);
+
+      saveDataToStorage();
+      updateInteractionsList();
+      alert('Dinâmica salva com sucesso!');
+
+      document.getElementById('pauseTime').value = '';
+      document.getElementById('questionText').value = '';
+      document.getElementById('correctFeedback').value = '';
+      document.getElementById('incorrectFeedback').value = '';
+      renderOptionsForm();
+    }
+
+    function updateInteractionsList() {
+      const list = document.getElementById('interactionsList');
+      if (interactions.length === 0) {
+        list.innerText = 'Nenhuma dinâmica cadastrada ainda.';
+        return;
+      }
+
+      list.innerHTML = '';
+      interactions.forEach(item => {
+        const div = document.createElement('div');
+        div.className = 'interaction-card';
+        div.innerHTML = `
+          <div>
+            <strong>⏱️ ${item.time}s</strong> - [${item.type === 'choice' ? 'Múltipla Escolha' : 'Ordenar'}] ${item.question}
+          </div>
+          <button class="btn btn-danger" style="width:auto; margin:0; padding: 6px 12px;" onclick="removeInteraction(${item.id})">Excluir</button>
+        `;
+        list.appendChild(div);
+      });
+    }
+
+    function removeInteraction(id) {
+      interactions = interactions.filter(i => i.id !== id);
+      saveDataToStorage();
+      updateInteractionsList();
+    }
+
+    function extractYouTubeId(url) {
+      const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
+      const match = url.match(regExp);
+      return (match && match[2].length === 11) ? match[2] : null;
+    }
+
+    // TELA DO ALUNO
+    function initStudentPlayer() {
+      const url = document.getElementById('youtubeUrl').value.trim();
+      const videoId = extractYouTubeId(url);
+
+      if (!videoId) return alert('O link do vídeo do YouTube é inválido!');
+
+      // Reset de pontuação
+      score = { correct: 0, incorrect: 0, total: interactions.length };
+      interactions.forEach(i => i.triggered = false);
+
+      document.getElementById('startOverlay').classList.remove('hidden');
+      document.getElementById('quizOverlay').classList.add('hidden');
+      document.getElementById('reportOverlay').classList.add('hidden');
+
+      const container = document.getElementById('playerContainer');
+      container.innerHTML = `
+        <iframe id="player" 
+          src="https://www.youtube-nocookie.com/embed/${videoId}?enablejsapi=1&autoplay=0" 
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+          referrerpolicy="strict-origin-when-cross-origin" 
+          allowfullscreen>
+        </iframe>
+      `;
+
+      if (window.YT && window.YT.Player) {
+        setupPlayerObject();
+      } else {
+        window.onYouTubeIframeAPIReady = setupPlayerObject;
+        const tag = document.createElement('script');
+        tag.src = "https://www.youtube.com/iframe_api";
+        document.head.appendChild(tag);
+      }
+    }
+
+    function setupPlayerObject() {
+      player = new YT.Player('player', {
+        events: { 'onStateChange': onPlayerStateChange }
+      });
+    }
+
+    function startStudentVideo() {
+      document.getElementById('startOverlay').classList.add('hidden');
+      if (player && typeof player.playVideo === 'function') {
+        player.playVideo();
+      }
+    }
+
+    function onPlayerStateChange(event) {
+      if (event.data === YT.PlayerState.PLAYING) {
+        checkTimer = setInterval(checkVideoTime, 250);
+      } else if (event.data === YT.PlayerState.ENDED) {
+        clearInterval(checkTimer);
+        showFinalReport();
+      } else {
+        clearInterval(checkTimer);
+      }
+    }
+
+    function checkVideoTime() {
+      if (!player || typeof player.getCurrentTime !== 'function') return;
+
+      const currentTime = Math.floor(player.getCurrentTime());
+      const nextInteraction = interactions.find(i => i.time === currentTime && !i.triggered);
+
+      if (nextInteraction) {
+        nextInteraction.triggered = true;
+        currentInteraction = nextInteraction;
+        player.pauseVideo();
+        showQuizOverlay(nextInteraction);
+      }
+    }
+
+    let selectedChoiceId = null;
+
+    function showQuizOverlay(data) {
+      document.getElementById('displayQuestion').innerText = data.question;
+      document.getElementById('displayFeedback').className = 'feedback hidden';
+      document.getElementById('btnContinue').classList.add('hidden');
+      document.getElementById('btnAction').classList.remove('hidden');
+
+      const optionsBox = document.getElementById('displayOptions');
+      optionsBox.innerHTML = '';
+
+      if (data.type === 'choice') {
+        selectedChoiceId = null;
+        data.options.forEach(opt => {
+          const btn = document.createElement('div');
+          btn.className = 'quiz-btn';
+          btn.innerText = opt.text;
+          btn.onclick = () => {
+            document.querySelectorAll('.quiz-btn').forEach(b => b.style.borderColor = '#5f6368');
+            btn.style.borderColor = '#1a73e8';
+            selectedChoiceId = opt.id;
+          };
+          optionsBox.appendChild(btn);
+        });
+      } else {
+        const shuffled = [...data.options].sort(() => Math.random() - 0.5);
+        shuffled.forEach(opt => {
+          const item = document.createElement('div');
+          item.className = 'quiz-btn drag-item';
+          item.setAttribute('draggable', 'true');
+          item.dataset.id = opt.id;
+          item.innerHTML = `
+            <span>${opt.text}</span>
+            <span class="drag-handle">☰</span>
+          `;
+          optionsBox.appendChild(item);
+        });
+        setupDragAndDrop(optionsBox);
+      }
+
+      document.getElementById('quizOverlay').classList.remove('hidden');
+    }
+
+    function setupDragAndDrop(container) {
+      let draggedItem = null;
+
+      container.querySelectorAll('.drag-item').forEach(item => {
+        item.addEventListener('dragstart', () => {
+          draggedItem = item;
+          setTimeout(() => item.classList.add('dragging'), 0);
+        });
+
+        item.addEventListener('dragend', () => {
+          draggedItem.classList.remove('dragging');
+          draggedItem = null;
+        });
+      });
+
+      container.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        const afterElement = getDragAfterElement(container, e.clientY);
+        const dragging = container.querySelector('.dragging');
+        if (dragging) {
+          if (afterElement == null) {
+            container.appendChild(dragging);
+          } else {
+            container.insertBefore(dragging, afterElement);
+          }
+        }
+      });
+    }
+
+    function getDragAfterElement(container, y) {
+      const draggableElements = [...container.querySelectorAll('.drag-item:not(.dragging)')];
+
+      return draggableElements.reduce((closest, child) => {
+        const box = child.getBoundingClientRect();
+        const offset = y - box.top - box.height / 2;
+        if (offset < 0 && offset > closest.offset) {
+          return { offset: offset, element: child };
+        } else {
+          return closest;
+        }
+      }, { offset: Number.NEGATIVE_INFINITY }).element;
+    }
+
+    function handleQuizSubmit() {
+      const feedback = document.getElementById('displayFeedback');
+      let isCorrect = false;
+
+      if (currentInteraction.type === 'choice') {
+        if (selectedChoiceId === null) return alert('Escolha uma das alternativas!');
+        isCorrect = selectedChoiceId === currentInteraction.correctAnswers[0];
+      } else {
+        const currentElements = document.querySelectorAll('#displayOptions .drag-item');
+        const studentSeq = Array.from(currentElements).map(el => parseInt(el.dataset.id));
+        isCorrect = JSON.stringify(studentSeq) === JSON.stringify(currentInteraction.correctAnswers);
+      }
+
+      if (isCorrect) {
+        score.correct++;
+        feedback.innerText = currentInteraction.correctFeedback || "✨ Resposta Correta! Excelente!";
+        feedback.className = "feedback correct";
+      } else {
+        score.incorrect++;
+        feedback.innerText = currentInteraction.incorrectFeedback || "❌ Resposta Incorreta!";
+        feedback.className = "feedback incorrect";
+      }
+
+      document.getElementById('btnAction').classList.add('hidden');
+      document.getElementById('btnContinue').classList.remove('hidden');
+    }
+
+    function resumeVideo() {
+      document.getElementById('quizOverlay').classList.add('hidden');
+      player.playVideo();
+    }
+
+    // EXIBIR RELATÓRIO FINAL
+    function showFinalReport() {
+      const total = score.total;
+      const percentage = total > 0 ? Math.round((score.correct / total) * 100) : 100;
+
+      document.getElementById('totalQuestions').innerText = total;
+      document.getElementById('correctAnswers').innerText = score.correct;
+      document.getElementById('incorrectAnswers').innerText = score.incorrect;
+      document.getElementById('scorePercentage').innerText = `${percentage}%`;
+
+      const msgBox = document.getElementById('finalMessage');
+      if (percentage === 100) {
+        msgBox.innerText = "🏆 Perfeito! Você acertou todas as atividades do vídeo!";
+      } else if (percentage >= 70) {
+        msgBox.innerText = "👏 Muito bem! Você teve um ótimo aproveitamento.";
+      } else {
+        msgBox.innerText = "📚 Que tal rever o vídeo e tentar novamente para melhorar sua nota?";
+      }
+
+      document.getElementById('reportOverlay').classList.remove('hidden');
+    }
+
+    function restartVideo() {
+      initStudentPlayer();
+    }
+  </script>
+</body>
+</html>
